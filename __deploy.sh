@@ -33,5 +33,8 @@ cp "$KITTY_DIR"/share/applications/kitty-open.desktop ~/.local/share/application
 sed -i "s|Icon=kitty|Icon=$KITTY_DIR/share/icons/hicolor/256x256/apps/kitty.png|g" ~/.local/share/applications/kitty*.desktop
 sed -i "s|Exec=kitty|Exec=$BIN_DIR/kitty|g" ~/.local/share/applications/kitty*.desktop
 
+mkdir -p ~/.config/kitty
+cp -i kitty.conf ~/.config/kitty/kitty.conf
+
 rm -rf "$TEMP"
 exit 0

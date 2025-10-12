@@ -17,12 +17,7 @@ This project provides a deployment script for installing Kitty terminal emulator
    ```
 
 ## Dropdown
-
-```
-gsettings --schemadir ~/.local/share/gnome-shell/extensions/toggle-alacritty@itstime.tech/schemas \
-  set org.gnome.shell.extensions.toggle-alacritty command "/home/$USER/bin/kitty --single-instance"
-```
-
+Install the Gnome Extension: Quake Terminal.
 
 ## Configuration
 

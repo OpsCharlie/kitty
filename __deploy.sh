@@ -17,14 +17,32 @@ case "$(command uname -m)" in
 esac
 
 VERSION=$(curl -s https://api.github.com/repos/kovidgoyal/kitty/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-TAR="kitty-${VERSION/v/}-$ARCH.txz"
-URL="https://github.com/kovidgoyal/kitty/releases/download/$VERSION/$TAR"
-if ! curl -s "$URL" -L -o "$TEMP/$TAR"; then
-    echo "Download failed"
-    exit 1
+LATEST_VERSION=${VERSION#v}
+
+if [[ -f "$KITTY_DIR/bin/kitty" ]]; then
+    CURRENT_VERSION=$("$KITTY_DIR/bin/kitty" --version | awk '{print $2}')
+    if [[ "$CURRENT_VERSION" != "$LATEST_VERSION" ]]; then
+        echo "Updating kitty to $LATEST_VERSION"
+        DOWNLOAD=true
+    else
+        echo "Kitty is up to date ($CURRENT_VERSION)"
+        DOWNLOAD=false
+    fi
+else
+    echo "Installing kitty $LATEST_VERSION"
+    DOWNLOAD=true
 fi
-tar -xJof "$TEMP/$TAR" -C "$TEMP/mp" 
-cp -a "$TEMP"/mp/* "$KITTY_DIR"
+
+if [[ "$DOWNLOAD" == true ]]; then
+    TAR="kitty-${LATEST_VERSION}-$ARCH.txz"
+    URL="https://github.com/kovidgoyal/kitty/releases/download/$VERSION/$TAR"
+    if ! curl -s "$URL" -L -o "$TEMP/$TAR"; then
+        echo "Download failed"
+        exit 1
+    fi
+    tar -xJof "$TEMP/$TAR" -C "$TEMP/mp"
+    cp -a "$TEMP"/mp/* "$KITTY_DIR"
+fi
 
 ln -sf "$KITTY_DIR/bin/kitty" "$KITTY_DIR/bin/kitten" "$BIN_DIR"
 

@@ -6,7 +6,6 @@ This project provides a deployment script for installing Kitty terminal emulator
 
 - `__deploy.sh`: Installation script that downloads and installs Kitty, sets up desktop entries, and copies the config.
 - `kitty.conf`: Custom Kitty configuration with dropdown-style settings (borderless, top-positioned window).
-- `toggle_kitty.sh`: Script to toggle Kitty window visibility for dropdown behavior.
 
 ## Installation
 
@@ -17,6 +16,7 @@ This project provides a deployment script for installing Kitty terminal emulator
    ```
 
 ## Dropdown
+
 Install the Gnome Extension: Quake Terminal.
 
 ## Configuration
@@ -25,4 +25,5 @@ Edit `kitty.conf` to customize appearance and behavior. The current config inclu
 
 - Transparent background
 - Custom font (IosevkaTerm Nerd Font)
-- Dropdown window settings (hide decorations, top placement)
+- No window decorations
+- Colorscheme

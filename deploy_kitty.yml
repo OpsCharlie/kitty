@@ -68,7 +68,7 @@
         latest_tag: "{{ release_info.json | json_query('tag_name') }}"
 
     - name: Check if Kitty is already installed
-      ansible.builtin.command: "{{ kitty_dir }}/bin/kitty --version"
+      ansible.builtin.command: "{{ bin_dir }}/kitty --version"
       register: installed_version
       failed_when: false
       changed_when: false

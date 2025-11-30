@@ -3,7 +3,7 @@
 KITTY_DIR="/home/$USER/.local/kitty"
 BIN_DIR="/home/$USER/bin"
 
-[[ -d $BIN_DIR ]] || mkdir -p  $BIN_DIR
+[[ -d $BIN_DIR ]] || mkdir -p  "$BIN_DIR"
 [[ -d $KITTY_DIR ]] || mkdir -p "$KITTY_DIR"
 
 TEMP=$(command mktemp -d "/tmp/kitty-install-XXXXXXXXXXXX")
@@ -18,9 +18,10 @@ esac
 
 VERSION=$(curl -s https://api.github.com/repos/kovidgoyal/kitty/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
 LATEST_VERSION=${VERSION#v}
+KITTY_DIR="${KITTY_DIR}_${LATEST_VERSION}"
 
-if [[ -f "$KITTY_DIR/bin/kitty" ]]; then
-    CURRENT_VERSION=$("$KITTY_DIR/bin/kitty" --version | awk '{print $2}')
+if [[ -f "$BIN_DIR/kitty" ]]; then
+    CURRENT_VERSION=$("$BIN_DIR/kitty" --version | awk '{print $2}')
     if [[ "$CURRENT_VERSION" != "$LATEST_VERSION" ]]; then
         echo "Updating kitty to $LATEST_VERSION"
         DOWNLOAD=true

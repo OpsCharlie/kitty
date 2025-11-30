@@ -36,7 +36,7 @@ fi
 if [[ "$DOWNLOAD" == true ]]; then
     TAR="kitty-${LATEST_VERSION}-$ARCH.txz"
     URL="https://github.com/kovidgoyal/kitty/releases/download/$VERSION/$TAR"
-    if ! curl -s "$URL" -L -o "$TEMP/$TAR"; then
+    if ! curl -# "$URL" -L -o "$TEMP/$TAR"; then
         echo "Download failed"
         exit 1
     fi

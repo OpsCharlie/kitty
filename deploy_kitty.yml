@@ -9,8 +9,18 @@
     kitty_dir: "{{ ansible_user_dir }}/.local/kitty"
     config_dir: "{{ ansible_user_dir }}/.config/kitty"
     desktop_dir: "{{ ansible_user_dir }}/.local/share/applications"
+    icons_dir: "{{ ansible_user_dir }}/.local/share/icons"
     repo_url: "https://api.github.com/repos/kovidgoyal/kitty/releases/latest"
     deploy_dir: "{{ playbook_dir }}"
+
+
+  handlers:
+    - name: Update desktop database
+      ansible.builtin.command:
+        cmd: update-desktop-database "{{ desktop_dir }}"
+      register: desktop_db_update
+      changed_when: desktop_db_update.rc == 0
+
 
   tasks:
     - name: Check required commands
@@ -19,7 +29,6 @@
       failed_when: false
       changed_when: false
       loop:
-        - jq
         - curl
         - tar
 
@@ -54,6 +63,7 @@
         - "{{ bin_dir }}"
         - "{{ config_dir }}"
         - "{{ desktop_dir }}"
+        - "{{ icons_dir }}"
 
     - name: Fetch latest release information
       ansible.builtin.uri:
@@ -152,6 +162,7 @@
         dest: "{{ desktop_dir }}/{{ item.item }}"
         mode: '0640'
       loop: "{{ desktop_files.results }}"
+      notify: Update desktop database
 
     - name: Copy Kitty configuration
       ansible.builtin.copy:
@@ -165,7 +176,3 @@
         path: "{{ temp_dir.path }}"
         state: absent
       when: install_needed
-
-    - name: Update desktop database
-      ansible.builtin.command: update-desktop-database {{ desktop_dir }}
-      changed_when: false

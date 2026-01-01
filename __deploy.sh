@@ -1,7 +1,7 @@
 #!/bin/bash
 
 KITTY_DIR="/home/$USER/.local/kitty"
-BIN_DIR="/home/$USER/bin"
+BIN_DIR="/home/$USER/.local/bin"
 
 [[ -d $BIN_DIR ]] || mkdir -p  "$BIN_DIR"
 

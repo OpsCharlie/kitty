@@ -53,7 +53,7 @@ sed -i "s|Icon=kitty|Icon=$KITTY_DIR/share/icons/hicolor/256x256/apps/kitty.png|
 sed -i "s|Exec=kitty|Exec=$BIN_DIR/kitty|g" ~/.local/share/applications/kitty*.desktop
 
 mkdir -p ~/.config/kitty
-cp -i kitty.conf ~/.config/kitty/kitty.conf
+cp kitty.conf neighboring_window.py  pass_keys.py  relative_resize.py  split_window.py  tab_bar.py ~/.config/kitty/
 
 rm -rf "$TEMP"
 exit 0

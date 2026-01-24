@@ -32,10 +32,34 @@ REFRESH_INTERVAL = 2.0
 _prev_disk = {"time": 0, "read": 0, "write": 0}
 _prev_net = {"time": 0, "rx": 0, "tx": 0}
 
+MEMORY_THRESHOLD = 80.0  # percentage
+
 # Pre-calculate colors (will be set on first draw)
 _colors_cached = False
-_tab_bg = 0
-_tab_fg = 0
+_tab_bg_active = 0
+_tab_fg_active = 0
+
+# Get CPU core count once at startup
+try:
+    with open("/proc/cpuinfo", "r") as f:
+        cpu_cores = sum(1 for line in f if line.startswith("processor\t:"))
+except:
+    cpu_cores = 8  # fallback
+
+
+def _clean_title(title: str) -> str:
+    """Extract process name from command with arguments."""
+    if not title:
+        return title
+
+    # Split by spaces and take first part
+    first_part = title.split()[0]
+
+    # If it's a path, extract just the executable name
+    if "/" in first_part:
+        first_part = first_part.split("/")[-1]
+
+    return first_part
 
 
 def _human_bytes(b: float, suffix: str = "B") -> str:
@@ -53,8 +77,8 @@ def _get_cpu_load() -> str:
     """Get CPU load average."""
     try:
         with open("/proc/loadavg", "r") as f:
-            load = f.read().split()[0]
-        return f"L:{load}"
+            load = float(f.read().split()[0])
+        return f"L:{load:.2f}"
     except Exception:
         return ""
 
@@ -70,12 +94,10 @@ def _get_memory() -> str:
                     info[parts[0].rstrip(":")] = int(parts[1])
 
         total = info.get("MemTotal", 0)
-        free = info.get("MemFree", 0)
-        buffers = info.get("Buffers", 0)
-        cached = info.get("Cached", 0)
+        available = info.get("MemAvailable", 0)
 
-        if total > 0:
-            used_pct = (total - free - buffers - cached) / total * 100
+        if total > 0 and available > 0:
+            used_pct = (total - available) / total * 100
             return f"M:{used_pct:.0f}%"
     except Exception:
         pass
@@ -94,10 +116,9 @@ def _get_uptime() -> str:
 
         if days > 0:
             return f"{days}d{hours}h"
-        elif hours > 0:
+        if hours > 0:
             return f"{hours}h{minutes}m"
-        else:
-            return f"{minutes}m"
+        return f"{minutes}m"
     except Exception:
         return ""
 
@@ -265,7 +286,7 @@ def _check_reboot_required() -> str:
 
 def _fetch_status() -> None:
     """Gather all system stats and update cache."""
-    global cached_status, last_fetch_time
+    global cached_status, last_fetch_time, cpu_load_is_high
 
     try:
         parts = []
@@ -290,14 +311,29 @@ def _fetch_status() -> None:
         if reboot:
             parts.append(reboot)
 
-        # CPU load
-        load = _get_cpu_load()
-        if load:
-            parts.append(load)
+        # CPU load and check if high
+        cpu_load_is_high = False
+        load_str = _get_cpu_load()
+        if load_str:
+            # Extract load value and check against cached cores
+            try:
+                load_value = float(load_str.split(":")[1])
+                cpu_load_is_high = load_value > cpu_cores
+            except:
+                pass
+            parts.append(load_str)
 
-        # Memory
+        # Memory and check if high
+        global memory_is_high
         mem = _get_memory()
         if mem:
+            # Extract memory percentage and check against threshold
+            try:
+                mem_value = float(mem.split(":")[1].rstrip("%"))
+                memory_is_high = mem_value > MEMORY_THRESHOLD
+            except Exception:
+                memory_is_high = False
+                pass
             parts.append(mem)
 
         # Disk I/O
@@ -344,11 +380,11 @@ def draw_tab(
 
     # Set colors based on active/inactive state
     if tab.is_active:
-        fg = as_rgb(int(draw_data.inactive_fg))
-        bg = as_rgb(int(draw_data.inactive_bg))
-    else:
         fg = as_rgb(int(draw_data.active_fg))
         bg = as_rgb(int(draw_data.active_bg))
+    else:
+        fg = as_rgb(int(draw_data.inactive_fg))
+        bg = as_rgb(int(draw_data.inactive_bg))
 
     screen.cursor.fg = fg
     screen.cursor.bg = bg
@@ -357,8 +393,10 @@ def draw_tab(
     if draw_data.leading_spaces:
         screen.draw(" " * draw_data.leading_spaces)
 
-    # Draw tab title
-    draw_title(draw_data, screen, tab, index)
+    # Draw tab title with index (cleaned to show only process name)
+    title = _clean_title(tab.title)
+    formatted_title = f"{index}: {title}"
+    screen.draw(formatted_title)
 
     # Handle trailing spaces and truncation
     trailing_spaces = min(max_title_length - 1, draw_data.trailing_spaces)
@@ -387,7 +425,7 @@ def draw_tab(
 
 
 def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
-    global _colors_cached, _tab_bg, _tab_fg
+    global _colors_cached, _tab_bg_active, _tab_fg_active, cpu_load_is_high, memory_is_high
 
     # Reset any formats left by tabs
     draw_attributed_string(Formatter.reset, screen)
@@ -412,15 +450,53 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     if padding > 0:
         screen.draw(" " * padding)
 
-    # Cache colors on first use
+    # Cache colors on first use - always use active colors for right status
     if not _colors_cached:
-        _tab_bg = as_rgb(int(draw_data.inactive_bg))
-        _tab_fg = as_rgb(int(draw_data.inactive_fg))
+        _tab_bg_active = as_rgb(int(draw_data.active_bg))
+        _tab_fg_active = as_rgb(int(draw_data.active_fg))
         _colors_cached = True
 
-    screen.cursor.fg = _tab_fg
-    screen.cursor.bg = _tab_bg
-    screen.draw(f" {status} ")
+    # Draw status with conditional coloring for CPU load and memory
+    screen.cursor.bg = _tab_bg_active
+    screen.cursor.fg = _tab_fg_active
+    screen.draw(" ")
+
+    current_pos = 0
+    separator = " ⡇ "
+
+    while current_pos < len(status):
+        next_sep = status.find(separator, current_pos)
+        if next_sep == -1:
+            segment = status[current_pos:]
+            current_pos = len(status)
+        else:
+            segment = status[current_pos:next_sep]
+            current_pos = next_sep + len(separator)
+
+        # Determine color for this segment
+        if cpu_load_is_high and segment.startswith("L:"):
+            # CPU load - red
+            screen.cursor.fg = as_rgb(0xFF0000)
+            screen.cursor.bold = True
+            screen.draw(segment)
+            screen.cursor.fg = _tab_fg_active
+            screen.cursor.bold = False
+        elif memory_is_high and segment.startswith("M:"):
+            # Memory - red
+            screen.cursor.fg = as_rgb(0xFF0000)
+            screen.cursor.bold = True
+            screen.draw(segment)
+            screen.cursor.fg = _tab_fg_active
+            screen.cursor.bold = False
+        else:
+            # Normal - yellow
+            screen.cursor.fg = _tab_fg_active
+            screen.draw(segment)
+
+        if next_sep != -1:
+            screen.draw(separator)
+
+    screen.draw(" ")
 
 
 def _redraw_tab_bar(timer_id) -> None:

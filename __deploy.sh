@@ -1,5 +1,30 @@
 #!/bin/bash
 
+usage() {
+  echo "Usage: $0 tmux|notmux"
+  echo "  tmux: use kitty with tmux"
+  echo "  notmux: use kitty tabs and shortcuts"
+  exit 1
+}
+
+
+if [[ $# -ne 1 ]]; then
+  usage
+fi
+
+case "$1" in
+  tmux)
+    TM=1
+    ;;
+  notmux)
+    TM=0
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+
 KITTY_DIR="/home/$USER/.local/kitty"
 BIN_DIR="/home/$USER/.local/bin"
 
@@ -53,7 +78,12 @@ sed -i "s|Icon=kitty|Icon=$KITTY_DIR/share/icons/hicolor/256x256/apps/kitty.png|
 sed -i "s|Exec=kitty|Exec=$BIN_DIR/kitty|g" ~/.local/share/applications/kitty*.desktop
 
 mkdir -p ~/.config/kitty
-cp kitty.conf neighboring_window.py  pass_keys.py  relative_resize.py  split_window.py  tab_bar.py ~/.config/kitty/
+if [[ $TM -eq 0 ]]; then
+  cp kitty.conf neighboring_window.py  pass_keys.py  relative_resize.py  split_window.py  tab_bar.py ~/.config/kitty/
+else
+  cp kitty_tmux.conf ~/.config/kitty/kitty.conf
+  rm ~/.config/kitty/neighboring_window.py  ~/.config/kitty/pass_keys.py  ~/.config/kitty/relative_resize.py  ~/.config/kitty/split_window.py  ~/.config/kitty/tab_bar.py 2> /dev/null
+fi
 
 rm -rf "$TEMP"
 exit 0

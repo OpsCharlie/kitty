@@ -30,6 +30,23 @@ This configuration replicates tmux-like functionality in kitty with seamless nvi
 - Custom tab bar with system stats (CPU, memory, network, disk I/O, etc.)
 - Works alongside tmux (smart-splits auto-detects the environment)
 
+### Shift+Enter with tmux
+
+The `tmux` deployment profile (`./__deploy.sh tmux`) installs `kitty_tmux.conf`,
+which includes this compatibility mapping:
+
+```conf
+map shift+enter send_text normal,application \x1b[13;2u
+```
+
+It sends an explicit Shift+Enter sequence through tmux, allowing OpenCode to
+insert a newline instead of submitting. It applies only to legacy normal and
+application keyboard modes; native Kitty keyboard-protocol handling is unchanged.
+The mapping also affects other applications using those legacy modes.
+
+The `notmux` profile is unchanged: OpenCode can distinguish Shift+Enter through
+Kitty's native keyboard protocol without this workaround.
+
 ### Keybindings
 
 #### Splits
